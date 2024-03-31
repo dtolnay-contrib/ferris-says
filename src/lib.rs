@@ -1,7 +1,8 @@
 use regex::Regex;
 use smallvec::*;
+use std::borrow::Cow;
 use std::io::{Result, Write};
-use textwrap::fill;
+use textwrap::wrap;
 use unicode_width::UnicodeWidthStr;
 
 const MASCOT: &[u8] = if cfg!(feature = "clippy") {
@@ -82,9 +83,7 @@ where
     let input = merge_white_spaces(input);
 
     // Let textwrap work its magic
-    let wrapped = fill(input.as_str(), max_width);
-
-    let lines: Vec<&str> = wrapped.lines().collect();
+    let lines = wrap(&input, max_width);
 
     let line_count = lines.len();
     let actual_width = longest_line(&lines);
@@ -108,9 +107,8 @@ where
             write_buffer.extend_from_slice(b"| ");
         }
 
-        let line_len = UnicodeWidthStr::width(line);
         write_buffer.extend_from_slice(line.as_bytes());
-        for _ in line_len..actual_width {
+        for _ in line.width()..actual_width {
             write_buffer.push(b' ');
         }
 
@@ -137,12 +135,9 @@ where
     writer.write_all(&write_buffer)
 }
 
-fn longest_line(lines: &[&str]) -> usize {
-    lines
-        .iter()
-        .map(|line| UnicodeWidthStr::width(*line))
-        .max()
-        .unwrap_or(0)
+fn longest_line(lines: &[Cow<str>]) -> usize {
+    // line.width() is the Unicode width in columns, not length in bytes.
+    lines.iter().map(|line| line.width()).max().unwrap_or(0)
 }
 
 /// Merge continues white spaces into one space character while preserving newline characters.
