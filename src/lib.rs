@@ -1,5 +1,4 @@
 use regex::Regex;
-use smallvec::*;
 use std::io::{Result, Write};
 use textwrap::fill;
 use unicode_width::UnicodeWidthStr;
@@ -28,10 +27,6 @@ const MASCOT: &[u8] = if cfg!(feature = "clippy") {
           / '-----' \
 "#
 };
-
-// A decent number for SmallVec's Buffer Size, not too large
-// but also big enough for most inputs
-const BUFSIZE: usize = 2048;
 
 /// Print out Ferris saying something.
 ///
@@ -76,7 +71,7 @@ where
     W: Write,
 {
     // Final output is stored here
-    let mut write_buffer = SmallVec::<[u8; BUFSIZE]>::new();
+    let mut write_buffer = Vec::new();
 
     // Pre process to merge continuous whitespaces into one space character
     let input = merge_white_spaces(input);
