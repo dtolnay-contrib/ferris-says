@@ -1,5 +1,4 @@
 use regex::Regex;
-use smallvec::*;
 use std::io::{Result, Write};
 use textwrap::fill;
 use unicode_width::UnicodeWidthStr;
@@ -28,10 +27,6 @@ const MASCOT: &[u8] = if cfg!(feature = "clippy") {
           / '-----' \
 "#
 };
-
-// A decent number for SmallVec's Buffer Size, not too large
-// but also big enough for most inputs
-const BUFSIZE: usize = 2048;
 
 /// Print out Ferris saying something.
 ///
@@ -75,9 +70,6 @@ pub fn say<W>(input: &str, max_width: usize, mut writer: W) -> Result<()>
 where
     W: Write,
 {
-    // Final output is stored here
-    let mut write_buffer = SmallVec::<[u8; BUFSIZE]>::new();
-
     // Pre process to merge continuous whitespaces into one space character
     let input = merge_white_spaces(input);
 
@@ -90,51 +82,51 @@ where
     let actual_width = longest_line(&lines);
 
     // top box border
-    write_buffer.push(b' ');
+    writer.write_all(b" ")?;
     for _ in 0..(actual_width + 2) {
-        write_buffer.push(b'_');
+        writer.write_all(b"_")?;
     }
-    write_buffer.push(b'\n');
+    writer.write_all(b"\n")?;
 
     // inner message
     for (i, line) in lines.into_iter().enumerate() {
         if line_count == 1 {
-            write_buffer.extend_from_slice(b"< ");
+            writer.write_all(b"< ")?;
         } else if i == 0 {
-            write_buffer.extend_from_slice(b"/ ");
+            writer.write_all(b"/ ")?;
         } else if i == line_count - 1 {
-            write_buffer.extend_from_slice(b"\\ ");
+            writer.write_all(b"\\ ")?;
         } else {
-            write_buffer.extend_from_slice(b"| ");
+            writer.write_all(b"| ")?;
         }
 
         let line_len = UnicodeWidthStr::width(line);
-        write_buffer.extend_from_slice(line.as_bytes());
+        writer.write_all(line.as_bytes())?;
         for _ in line_len..actual_width {
-            write_buffer.push(b' ');
+            writer.write_all(b" ")?;
         }
 
         if line_count == 1 {
-            write_buffer.extend_from_slice(b" >\n");
+            writer.write_all(b" >\n")?;
         } else if i == 0 {
-            write_buffer.extend_from_slice(b" \\\n");
+            writer.write_all(b" \\\n")?;
         } else if i == line_count - 1 {
-            write_buffer.extend_from_slice(b" /\n");
+            writer.write_all(b" /\n")?;
         } else {
-            write_buffer.extend_from_slice(b" |\n");
+            writer.write_all(b" |\n")?;
         }
     }
 
     // bottom box border
-    write_buffer.push(b' ');
+    writer.write_all(b" ")?;
     for _ in 0..(actual_width + 2) {
-        write_buffer.push(b'-');
+        writer.write_all(b"-")?;
     }
 
     // mascot
-    write_buffer.extend_from_slice(MASCOT);
+    writer.write_all(MASCOT)?;
 
-    writer.write_all(&write_buffer)
+    Ok(())
 }
 
 fn longest_line(lines: &[&str]) -> usize {
